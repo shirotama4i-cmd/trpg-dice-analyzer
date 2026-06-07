@@ -31,18 +31,89 @@
         }
         #output {
             margin-top: 30px;
-            padding: 20px;
+            padding: 25px;
             background-color: #fff;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            white-space: pre-wrap;
-            font-family: 'Courier New', Courier, monospace;
             display: none;
         }
         .file-info {
             margin-top: 10px;
             font-weight: bold;
             color: #27ae60;
+        }
+        .header-title {
+            font-size: 20px;
+            font-weight: bold;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .section-total {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 25px;
+            color: #555;
+        }
+        .char-block {
+            background-color: #fafbfc;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        .char-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-left: 4px solid #3498db;
+            padding-left: 10px;
+        }
+        .meta-info {
+            font-size: 14px;
+            margin-bottom: 15px;
+            color: #666;
+        }
+        .meta-info ul {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+        /* グリッド（テーブル）のスタイル設定 */
+        .grid-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .grid-table th, .grid-table td {
+            border: 1px solid #d1d5da;
+            padding: 8px 12px;
+            text-align: center;
+        }
+        .grid-table th {
+            background-color: #f1f3f5;
+            color: #495057;
+            font-weight: bold;
+        }
+        .grid-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .highlight-good {
+            background-color: #e8f5e9 !important;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        .highlight-bad {
+            background-color: #ffebee !important;
+            color: #c62828;
+            font-weight: bold;
+        }
+        .text-left {
+            text-align: left !important;
         }
     </style>
 </head>
@@ -97,35 +168,26 @@
             reader.readAsText(file, 'UTF-8');
         }
 
-        // ★ 汎用的な名前名寄せ（グループ化）ロジック
         function groupByFlexibleName(rawRecords) {
-            // ログに登場するユニークな名前のリストを作成（文字数の長い順にソート）
-            // 長い名前（例: VAL-SH411 (シャル)）を基準（代表名）にしやすくるため
             const uniqueNames = Array.from(new Set(rawRecords.map(r => r.rawName)))
                                      .filter(name => name.length > 0)
                                      .sort((a, b) => b.length - a.length);
 
-            // 各名前がどの「代表名」に紐づくかのマッピング辞書
             const nameMapping = {};
 
             uniqueNames.forEach(name => {
-                // すでにマッピングが確定している場合はスキップ
                 if (nameMapping[name]) return;
 
-                // 自分より文字数が同じか短い他の名前の中で、部分一致するものがないか探す
-                // 例: 「VAL-SH411 (シャル)」のループのとき、リスト内にある「VAL-SH411」を見つけ出す
                 const targetGroup = uniqueNames.filter(otherName => {
                     return name.includes(otherName) || otherName.includes(name);
                 });
 
-                // 見つかったグループ（ズレのある名前たち）は、一番長い名前（情報量が多い名前）に統一する
-                const representativeName = targetGroup[0]; // ソート済みなので0番目が最長
+                const representativeName = targetGroup[0];
                 targetGroup.forEach(gName => {
                     nameMapping[gName] = representativeName;
                 });
             });
 
-            // マッピングを元に、データを再グループ化する
             const charMap = {};
             rawRecords.forEach(r => {
                 const unifiedName = nameMapping[r.rawName] || r.rawName;
@@ -173,20 +235,19 @@
 
             if (rawRecords.length === 0) {
                 output.style.display = 'block';
-                output.textContent = "ダイスログが検出されませんでした。";
+                output.innerHTML = "<p>ダイスログが検出されませんでした。</p>";
                 return;
             }
 
-            // 汎用ロジックでグループ化を実行
             const charMap = groupByFlexibleName(rawRecords);
             generateReport(charMap, rawRecords.length);
         }
 
         function generateReport(charMap, totalCount) {
-            let report = "==================================================\n";
-            report += "       ココフォリア・ダイスログ分析レポート       \n";
-            report += "==================================================\n\n";
-            report += `総ダイスロール回数: ${totalCount} 回\n`;
+            output.innerHTML = ""; // 画面クリア
+
+            let html = `<div class="header-title">ココフォリア・ダイスログ分析レポート</div>`;
+            html += `<div class="section-total">総ダイスロール回数: ${totalCount} 回</div>`;
 
             const RESULT_ORDER = [
                 "クリティカル", "決定的成功", "イクストリーム成功", "ハード成功", 
@@ -197,70 +258,101 @@
                 if (!char) return;
                 const charList = charMap[char];
                 
-                report += `\n### キャラクター: ${char} ###\n`;
-                report += `  - 総ダイス数: ${charList.length} 回\n`;
+                html += `<div class="char-block">`;
+                html += `<h3 class="char-name">キャラクター: ${char}</h3>`;
+                html += `<div class="meta-info">`;
+                html += `  <div>・総ダイス数: <strong>${charList.length} 回</strong></div>`;
 
                 const d100List = charList.filter(r => r.is1d100);
                 if (d100List.length > 0) {
                     const sum = d100List.reduce((acc, r) => acc + r.diceValue, 0);
                     const avg = sum / d100List.length;
-                    report += `  - 1D100 平均出目: ${avg.toFixed(2)} (低いほど出目が良い)\n`;
+                    html += `  <div>・1D100 平均出目: <strong>${avg.toFixed(2)}</strong> (低いほど出目が良い)</div>`;
+                    html += `</div>`; // meta-info 終了
 
+                    // 判定内訳カウント
                     const resultsCount = {};
                     d100List.forEach(r => {
                         resultsCount[r.diceResult] = (resultsCount[r.diceResult] || 0) + 1;
                     });
 
-                    report += "  - 判定内訳 (固定順):\n";
+                    // グリッドテーブルの生成開始
+                    html += `<table class="grid-table">`;
+                    html += `  <thead><tr><th>判定結果</th><th>回数</th><th>割合 (%)</th></tr></thead>`;
+                    html += `  <tbody>`;
+
                     const printedResults = new Set();
 
+                    // 固定順でテーブル行を追加
                     RESULT_ORDER.forEach(resName => {
                         Object.keys(resultsCount).forEach(k => {
                             if (k.includes(resName) && !printedResults.has(k)) {
                                 const count = resultsCount[k];
                                 const pct = (count / d100List.length) * 100;
-                                report += `    * ${k}: ${count}回 (${pct.toFixed(1)}%)\n`;
+                                
+                                // クリティカル系・ファンブル系に薄く色付け
+                                let rowClass = "";
+                                if (/クリティカル|決定的成功/.test(k)) rowClass = ' class="highlight-good"';
+                                if (/ファンブル|致命的失敗/.test(k)) rowClass = ' class="highlight-bad"';
+
+                                html += `    <tr${rowClass}><td>${k}</td><td>${count}回</td><td>${pct.toFixed(1)}%</td></tr>`;
                                 printedResults.add(k);
                             }
                         });
                     });
 
+                    // その他の表記
                     Object.keys(resultsCount).forEach(k => {
                         if (!printedResults.has(k)) {
                             const count = resultsCount[k];
                             const pct = (count / d100List.length) * 100;
-                            report += `    * ${k}: ${count}回 (${pct.toFixed(1)}%)\n`;
+                            html += `    <tr><td>${k}</td><td>${count}回</td><td>${pct.toFixed(1)}%</td></tr>`;
                         }
                     });
 
+                    html += `  </tbody></table>`;
+
+                    // クリティカル/ファンブルの特記
                     const dramaticMoments = d100List.filter(r => 
                         /クリティカル|決定的成功|ファンブル|致命的失敗/.test(r.diceResult)
                     );
 
                     if (dramaticMoments.length > 0) {
-                        report += "  - 特筆すべき劇的瞬間:\n";
+                        html += `<div class="meta-info" style="margin-top:15px;">`;
+                        html += `  <strong>・クリティカル/ファンブル:</strong>`;
+                        html += `  <ul>`;
                         dramaticMoments.forEach(r => {
-                            report += `    * [${r.skillName}] 出目:${r.diceValue} ＞ ${r.diceResult}\n`;
+                            html += `    <li>[${r.skillName}] 出目:${r.diceValue} ＞ ${r.diceResult}</li>`;
                         });
+                        html += `  </ul>`;
+                        html += `</div>`;
                     }
                 } else {
-                    report += "  - 1D100判定のログはありません(ダメージダイス等のみ)\n";
+                    html += `  <div>・1D100判定のログはありません(ダメージダイス等のみ)</div>`;
+                    html += `</div>`; // meta-info 終了
                 }
 
+                // 技能トップ3
                 const skillCount = {};
                 charList.forEach(r => {
                     skillCount[r.skillName] = (skillCount[r.skillName] || 0) + 1;
                 });
                 const sortedSkills = Object.entries(skillCount).sort((a, b) => b[1] - a[1]).slice(0, 3);
                 
-                report += "  - よく使用した技能/項目トップ3:\n";
+                html += `<div class="meta-info">`;
+                html += `  <strong>・よく使用した技能/項目トップ3:</strong>`;
+                html += `  <ul>`;
                 sortedSkills.forEach(([sName, count]) => {
-                    report += `    * ${sName}: ${count}回\n`;
+                    html += `    <li>${sName}: ${count}回</li>`;
                 });
+                html += `  </ul>`;
+                html += `</div>`;
+
+                html += `</div>`; // char-block 終了
             });
 
+            output.innerHTML = html;
             output.style.display = 'block';
-            output.textContent = report;
             fileInfo.textContent = "解析が完了しました！";
         }
     </script>
