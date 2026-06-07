@@ -428,7 +428,7 @@
             fileInfo.textContent = "解析が完了しました！";
         }
 
-        function buildCharacterBlockHTML(charData) {
+function buildCharacterBlockHTML(charData) {
             const RESULT_ORDER = [
                 "クリティカル", "決定的成功", "イクストリーム成功", "ハード成功", 
                 "スペシャル", "成功", "失敗", "致命的失敗", "ファンブル"
@@ -468,7 +468,8 @@
                             const pct = (count / d100List.length) * 100;
                             
                             let rowClass = "";
-                            if (/クリティカル|決決定的成功/.test(k)) rowClass = ' class="highlight-good"';
+                            // ★「決決定的成功」になっていたタイポを「決定的成功」に修正しました
+                            if (/クリティカル|決定的成功/.test(k)) rowClass = ' class="highlight-good"';
                             if (/ファンブル|致命的失敗/.test(k)) rowClass = ' class="highlight-bad"';
 
                             blockHtml += `    <tr${rowClass}><td>${k}</td><td>${count}回</td><td>${pct.toFixed(1)}%</td></tr>`;
